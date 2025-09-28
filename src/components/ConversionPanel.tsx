@@ -15,9 +15,10 @@ interface UploadedImage {
 interface ConversionPanelProps {
   images: UploadedImage[];
   settings: PDFSettingsData;
+  onReset?: () => void;
 }
 
-export const ConversionPanel: React.FC<ConversionPanelProps> = ({ images, settings }) => {
+export const ConversionPanel: React.FC<ConversionPanelProps> = ({ images, settings, onReset }) => {
   const [isConverting, setIsConverting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
@@ -141,6 +142,10 @@ export const ConversionPanel: React.FC<ConversionPanelProps> = ({ images, settin
     if (downloadUrl) {
       URL.revokeObjectURL(downloadUrl);
       setDownloadUrl(null);
+    }
+    // Clear all images from the parent component
+    if (onReset) {
+      onReset();
     }
   };
 

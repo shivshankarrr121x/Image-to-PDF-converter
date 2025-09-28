@@ -87,7 +87,11 @@ const Index = () => {
                   <h2 className="text-2xl font-bold mb-2">Step 3: Convert & Download</h2>
                   <p className="text-muted-foreground">Generate your PDF and download instantly</p>
                 </div>
-                <ConversionPanel images={images} settings={settings} />
+                <ConversionPanel 
+                  images={images} 
+                  settings={settings} 
+                  onReset={() => setImages([])}
+                />
               </div>
             </div>
           )}
