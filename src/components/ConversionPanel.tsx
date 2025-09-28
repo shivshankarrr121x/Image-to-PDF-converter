@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Download, FileText, CheckCircle, Loader2 } from 'lucide-react';
+import jsPDF from 'jspdf';
 import type { PDFSettingsData } from './PDFSettings';
 
 interface UploadedImage {
@@ -22,24 +23,105 @@ export const ConversionPanel: React.FC<ConversionPanelProps> = ({ images, settin
   const [isComplete, setIsComplete] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
-  const simulateConversion = async () => {
+  const convertToPDF = async () => {
     setIsConverting(true);
     setProgress(0);
     setIsComplete(false);
 
-    // Simulate conversion progress
-    for (let i = 0; i <= 100; i += 10) {
-      setProgress(i);
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
+    try {
+      // Create PDF with proper dimensions based on settings
+      const orientation = settings.orientation === 'landscape' ? 'landscape' : 'portrait';
+      const format = settings.pageSize.toLowerCase() as 'a4' | 'a3' | 'a5' | 'letter' | 'legal';
+      
+      const pdf = new jsPDF({
+        orientation,
+        unit: 'mm',
+        format: format === 'letter' ? [215.9, 279.4] : 
+               format === 'legal' ? [215.9, 355.6] : format
+      });
 
-    // Create a mock PDF blob for download
-    const mockPdfContent = new Blob(['Mock PDF content'], { type: 'application/pdf' });
-    const url = URL.createObjectURL(mockPdfContent);
-    setDownloadUrl(url);
-    
-    setIsConverting(false);
-    setIsComplete(true);
+      // Process each image
+      for (let i = 0; i < images.length; i++) {
+        const image = images[i];
+        setProgress(((i + 1) / images.length) * 90); // 90% for processing, 10% for final generation
+
+        // Create image element and wait for it to load
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = image.preview;
+        });
+
+        // Add new page for each image except the first
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        // Get PDF page dimensions
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        
+        // Calculate image dimensions based on scaling setting
+        let imgWidth = img.width;
+        let imgHeight = img.height;
+        
+        if (settings.scaling === 'fit') {
+          // Fit image to page while maintaining aspect ratio  
+          const aspectRatio = imgWidth / imgHeight;
+          const pageAspectRatio = pageWidth / pageHeight;
+          
+          if (aspectRatio > pageAspectRatio) {
+            imgWidth = pageWidth;
+            imgHeight = pageWidth / aspectRatio;
+          } else {
+            imgHeight = pageHeight;
+            imgWidth = pageHeight * aspectRatio;
+          }
+        } else if (settings.scaling === 'fill') {
+          // Fill entire page
+          imgWidth = pageWidth;
+          imgHeight = pageHeight;
+        } else {
+          // Original size - convert pixels to mm (rough conversion)
+          imgWidth = imgWidth * 0.264583;
+          imgHeight = imgHeight * 0.264583;
+          
+          // Don't exceed page size
+          if (imgWidth > pageWidth) {
+            const ratio = pageWidth / imgWidth;
+            imgWidth = pageWidth;
+            imgHeight = imgHeight * ratio;
+          }
+          if (imgHeight > pageHeight) {
+            const ratio = pageHeight / imgHeight;
+            imgHeight = pageHeight;
+            imgWidth = imgWidth * ratio;
+          }
+        }
+
+        // Center image on page
+        const x = (pageWidth - imgWidth) / 2;
+        const y = (pageHeight - imgHeight) / 2;
+
+        // Add image to PDF
+        pdf.addImage(img, 'JPEG', x, y, imgWidth, imgHeight);
+      }
+
+      setProgress(100);
+
+      // Generate PDF blob
+      const pdfBlob = pdf.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      setDownloadUrl(url);
+      
+      setIsConverting(false);
+      setIsComplete(true);
+    } catch (error) {
+      console.error('PDF conversion failed:', error);
+      setIsConverting(false);
+      // You could add error state handling here
+    }
   };
 
   const downloadPDF = () => {
@@ -96,7 +178,7 @@ export const ConversionPanel: React.FC<ConversionPanelProps> = ({ images, settin
               <p>{settings.scaling} scaling • {settings.quality} quality</p>
             </div>
             <Button 
-              onClick={simulateConversion}
+              onClick={convertToPDF}
               className="bg-gradient-primary hover:shadow-glow transition-all duration-300 px-8 py-3 text-lg font-semibold"
               size="lg"
             >
