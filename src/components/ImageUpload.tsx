@@ -12,10 +12,18 @@ interface UploadedImage {
 
 interface ImageUploadProps {
   onImagesChange: (images: UploadedImage[]) => void;
+  onReset?: boolean;
 }
 
-export const ImageUpload: React.FC<ImageUploadProps> = ({ onImagesChange }) => {
+export const ImageUpload: React.FC<ImageUploadProps> = ({ onImagesChange, onReset }) => {
   const [images, setImages] = useState<UploadedImage[]>([]);
+
+  // Reset images when onReset prop changes to true
+  React.useEffect(() => {
+    if (onReset) {
+      setImages([]);
+    }
+  }, [onReset]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newImages = acceptedFiles.map(file => ({

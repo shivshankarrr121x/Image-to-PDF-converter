@@ -14,12 +14,18 @@ interface UploadedImage {
 
 const Index = () => {
   const [images, setImages] = useState<UploadedImage[]>([]);
+  const [resetTrigger, setResetTrigger] = useState(false);
   const [settings, setSettings] = useState<PDFSettingsData>({
     pageSize: 'A4',
     orientation: 'portrait',
     scaling: 'fit',
     quality: 'high'
   });
+
+  const handleReset = () => {
+    setImages([]);
+    setResetTrigger(prev => !prev); // Toggle to trigger reset in ImageUpload
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/20">
@@ -68,7 +74,7 @@ const Index = () => {
               <h2 className="text-2xl font-bold mb-2">Step 1: Upload Your Images</h2>
               <p className="text-muted-foreground">Drag and drop or click to select multiple images</p>
             </div>
-            <ImageUpload onImagesChange={setImages} />
+            <ImageUpload onImagesChange={setImages} onReset={resetTrigger} />
           </div>
 
           {/* Step 2: Configure Settings & Convert */}
@@ -90,7 +96,7 @@ const Index = () => {
                 <ConversionPanel 
                   images={images} 
                   settings={settings} 
-                  onReset={() => setImages([])}
+                  onReset={handleReset}
                 />
               </div>
             </div>
